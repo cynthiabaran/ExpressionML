@@ -4,10 +4,12 @@ buildscript {
     repositories {
         mavenCentral()
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0'
+        classpath 'com.android.tools.build:gradle:3.2.0-alpha11'
         classpath 'com.jakewharton.hugo:hugo-plugin:1.2.1'
+        classpath 'com.google.gms:google-services:4.0.1'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
         classpath "com.github.dcendents:android-maven-gradle-plugin:1.4.1"
     }
@@ -15,6 +17,7 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
+        google()
     }
 }
 
@@ -29,7 +32,5 @@ ext {
     artifactLabels = ['dlib', 'android']
     releaseVersionCode = 1
     releaseVersionName = '1.0.3'
-
-    androidBuildToolsVersion = '23.0.3'
-    androidSupportSdkVersion = '23.3.0'
+    androidSupportSdkVersion = '25.4.0'
 }

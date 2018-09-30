@@ -16,6 +16,7 @@
 
 package com.tzutalin.dlibtest;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
@@ -36,6 +37,7 @@ import android.os.Trace;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.tzutalin.dlib.Constants;
 import com.tzutalin.dlib.FaceDet;
@@ -46,6 +48,9 @@ import junit.framework.Assert;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.app.PendingIntent.getActivity;
+import static java.security.AccessController.getContext;
 
 /**
  * Class that takes in preview frames and converts the image to Bitmaps to process with dlib lib.
@@ -116,7 +121,7 @@ public class OnGetImageListener implements OnImageAvailableListener {
         Log.d(TAG, String.format("screen size (%d,%d)", screen_width, screen_height));
         if (screen_width < screen_height) {
             orientation = Configuration.ORIENTATION_PORTRAIT;
-            mScreenRotation = 90;
+            mScreenRotation = -90;
         } else {
             orientation = Configuration.ORIENTATION_LANDSCAPE;
             mScreenRotation = 0;
@@ -145,6 +150,20 @@ public class OnGetImageListener implements OnImageAvailableListener {
         final Canvas canvas = new Canvas(dst);
         canvas.drawBitmap(src, matrix, null);
     }
+
+    public double calculateEAR(List<Point> eye) {
+        return ( euclideanDistance(eye.get(1), eye.get(5))+ euclideanDistance(eye.get(2), eye.get(4)) )
+                / (2 * euclideanDistance(eye.get(0), eye.get(3)));
+    }
+
+    public double euclideanDistance(Point p1, Point p2) {
+        return Math.hypot(p1.x-p2.x, p1.y-p2.y);
+    }
+
+
+    private int frameCount = 0;
+    private int calibrationCount=0;
+    private double calibrationEAR=100;
 
     @Override
     public void onImageAvailable(final ImageReader reader) {
@@ -203,6 +222,7 @@ public class OnGetImageListener implements OnImageAvailableListener {
                     false);
 
             image.close();
+
         } catch (final Exception e) {
             if (image != null) {
                 image.close();
@@ -234,7 +254,9 @@ public class OnGetImageListener implements OnImageAvailableListener {
                             results = mFaceDet.detect(mCroppedBitmap);
                         }
                         long endTime = System.currentTimeMillis();
-                        mTransparentTitleView.setText("Time cost: " + String.valueOf((endTime - startTime) / 1000f) + " sec");
+
+
+                        //mTransparentTitleView.setText("Time cost: " + String.valueOf((endTime - startTime) / 1000f) + " sec");
                         // Draw on bitmap
                         if (results != null) {
                             for (final VisionDetRet ret : results) {
@@ -249,6 +271,31 @@ public class OnGetImageListener implements OnImageAvailableListener {
 
                                 // Draw landmark
                                 ArrayList<Point> landmarks = ret.getFaceLandmarks();
+
+                                List<Point> leftEye = landmarks.subList(36,42);
+                                //ArrayList<Point> rightEye = (ArrayList<Point>) ret.getFaceLandmarks().subList(42,47);
+                                double EAR = calculateEAR(leftEye);
+
+                                if (calibrationCount<30) {
+                                    mTransparentTitleView.setText("Calibrating... Keep blinking");
+                                    if (calibrationEAR>EAR) {
+                                        calibrationEAR=EAR;
+                                    }
+                                    calibrationCount++;
+                                } else {
+                                    if (EAR<calibrationEAR+0.2){
+                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
+                                        frameCount++;
+                                        if (frameCount>2) {
+                                            mTransparentTitleView.setText("Piscou! ;)");
+                                        }
+                                    } else {
+                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
+                                        frameCount=0;
+                                    }
+                                }
+
+
                                 for (Point point : landmarks) {
                                     int pointX = (int) (point.x * resizeRatio);
                                     int pointY = (int) (point.y * resizeRatio);

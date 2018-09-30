@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "${rootProject.ext.androidBuildToolsVersion}"
+    compileSdkVersion 24
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "com.tzutalin.dlibtest"
@@ -35,23 +35,24 @@ repositories {
     mavenLocal()
 }
 
-apply plugin: 'com.neenbedankt.android-apt'
+//apply plugin: 'com.neenbedankt.android-apt'
 def AAVersion = '4.0.0'
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile "com.android.support:appcompat-v7:${rootProject.ext.androidSupportSdkVersion}"
-    compile 'com.android.support:design:23.3.0'
-    compile 'com.github.dexafree:materiallist:3.0.1'
-    compile project(':dlib')
-    apt "org.androidannotations:androidannotations:$AAVersion"
-    compile "org.androidannotations:androidannotations-api:$AAVersion"
-
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "com.android.support:appcompat-v7:${rootProject.ext.androidSupportSdkVersion}"
+    implementation 'com.android.support:design:24.2.0'
+    implementation 'com.github.dexafree:materiallist:3.0.1'
+    implementation project(':dlib')
+    annotationProcessor "org.androidannotations:androidannotations:$AAVersion"
+    implementation "org.androidannotations:androidannotations-api:$AAVersion"
+    implementation 'com.google.firebase:firebase-core:16.0.1'
     // Add AndroidJUnit
-    androidTestCompile "com.android.support:support-annotations:${rootProject.ext.androidSupportSdkVersion}"
-    androidTestCompile 'com.android.support.test:runner:0.5'
-    androidTestCompile 'com.android.support.test:rules:0.5'
+    androidTestImplementation "com.android.support:support-annotations:${rootProject.ext.androidSupportSdkVersion}"
+    androidTestImplementation 'com.android.support.test:runner:0.5'
+    androidTestImplementation'com.android.support.test:rules:0.5'
     // Optional -- Hamcrest library
-    androidTestCompile 'org.hamcrest:hamcrest-library:1.3'
+    androidTestImplementation 'org.hamcrest:hamcrest-library:1.3'
 }
 apply plugin: 'com.jakewharton.hugo'
+apply plugin: 'com.google.gms.google-services'

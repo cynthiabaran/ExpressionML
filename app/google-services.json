@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "177328647923",
+    "firebase_url": "https://expression-classifier.firebaseio.com",
+    "project_id": "expression-classifier",
+    "storage_bucket": "expression-classifier.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177328647923:android:2556d08ad2ab5b7d",
+        "android_client_info": {
+          "package_name": "com.tzutalin.dlibtest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "177328647923-5asipbgjocqvg9r8pn7q56hjmgtc0tr4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZ8o1-DVtgtOcijjxUjSatH06RSAc93aI"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -229,7 +229,7 @@ public class CameraConnectionFragment extends Fragment {
      *
      * @param text The message to show
      */
-    private void showToast(final String text) {
+    public void showToast(final String text) {
         final Activity activity = getActivity();
         if (activity != null) {
             activity.runOnUiThread(
@@ -357,14 +357,14 @@ public class CameraConnectionFragment extends Fragment {
                 }
             }
 
-            Integer num_facing_back_camera = cameraFaceTypeMap.get(CameraCharacteristics.LENS_FACING_BACK);
+            Integer num_facing_front_camera = cameraFaceTypeMap.get(CameraCharacteristics.LENS_FACING_FRONT);
             for (final String cameraId : manager.getCameraIdList()) {
                 final CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
                 final Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                // If facing back camera or facing external camera exist, we won't use facing front camera
-                if (num_facing_back_camera != null && num_facing_back_camera > 0) {
-                    // We don't use a front facing camera in this sample if there are other camera device facing types
-                    if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
+                // If facing front camera or facing external camera exist, we won't use facing back camera
+                if (num_facing_front_camera != null && num_facing_front_camera > 0) {
+                    // We don't use a back facing camera in this sample if there are other camera device facing types
+                    if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
                         continue;
                     }
                 }
@@ -419,6 +419,7 @@ public class CameraConnectionFragment extends Fragment {
         configureTransform(width, height);
         final Activity activity = getActivity();
         final CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+
         try {
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
@@ -622,7 +623,7 @@ public class CameraConnectionFragment extends Fragment {
             matrix.postScale(scale, scale, centerX, centerY);
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         } else if (Surface.ROTATION_180 == rotation) {
-            matrix.postRotate(180, centerX, centerY);
+            //matrix.postRotate(180, centerX, centerY);
         }
         textureView.setTransform(matrix);
     }
