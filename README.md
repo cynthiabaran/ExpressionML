@@ -69,7 +69,6 @@ repositories {
 }
 
 dependencies {
-    compile 'com.tzutalin.dlib-android-app:dlib:1.0.3'
 }
 
 ```

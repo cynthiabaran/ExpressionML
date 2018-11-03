@@ -34,11 +34,17 @@ import android.media.ImageReader;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Handler;
 import android.os.Trace;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.tzutalin.dlib.Constants;
 import com.tzutalin.dlib.FaceDet;
 import com.tzutalin.dlib.VisionDetRet;
@@ -47,7 +53,10 @@ import junit.framework.Assert;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static android.app.PendingIntent.getActivity;
 import static java.security.AccessController.getContext;
@@ -164,7 +173,11 @@ public class OnGetImageListener implements OnImageAvailableListener {
     private int frameCount = 0;
     private int calibrationCount=0;
     private double calibrationEAR=100;
-
+    Map<String, Object> measurement = new HashMap<>();
+    Map<String, Object> mixed = new HashMap<>();
+    private boolean send_flag=false;
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
+    //FirebaseDatabase database = FirebaseDatabase.getInstance();
     @Override
     public void onImageAvailable(final ImageReader reader) {
         Image image = null;
@@ -271,30 +284,162 @@ public class OnGetImageListener implements OnImageAvailableListener {
 
                                 // Draw landmark
                                 ArrayList<Point> landmarks = ret.getFaceLandmarks();
+                                Map<String, Object> landmark_hash = new HashMap<>();
 
-                                List<Point> leftEye = landmarks.subList(36,42);
-                                //ArrayList<Point> rightEye = (ArrayList<Point>) ret.getFaceLandmarks().subList(42,47);
-                                double EAR = calculateEAR(leftEye);
 
-                                if (calibrationCount<30) {
-                                    mTransparentTitleView.setText("Calibrating... Keep blinking");
-                                    if (calibrationEAR>EAR) {
-                                        calibrationEAR=EAR;
-                                    }
-                                    calibrationCount++;
-                                } else {
-                                    if (EAR<calibrationEAR+0.2){
-                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
-                                        frameCount++;
-                                        if (frameCount>2) {
-                                            mTransparentTitleView.setText("Piscou! ;)");
-                                        }
-                                    } else {
-                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
-                                        frameCount=0;
-                                    }
+                                for (int i = 0; i < landmarks.size(); i++) {
+//                                    Map<String, Object> point_hash = new HashMap<>();
+//                                    point_hash.put("x",String.valueOf();
+//                                    point_hash.put("y",String.valueOf(landmarks.get(i).y));
+                                    landmark_hash.put(String.valueOf(i)+"_x",landmarks.get(i).x);
+                                    landmark_hash.put(String.valueOf(i)+"_y",landmarks.get(i).y);
                                 }
 
+
+//                                List<Point> leftEye = landmarks.subList(36,42);
+//                                //ArrayList<Point> rightEye = (ArrayList<Point>) ret.getFaceLandmarks().subList(42,47);
+//                                double EAR = calculateEAR(leftEye);
+//
+//                                if (calibrationCount<30) {
+//                                    mTransparentTitleView.setText("Calibrating... Keep blinking");
+//                                    if (calibrationEAR>EAR) {
+//                                        calibrationEAR=EAR;
+//                                    }
+//                                    calibrationCount++;
+//                                } else {
+//                                    if (EAR<calibrationEAR+0.2){
+//                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
+//                                        frameCount++;
+//                                        if (frameCount>2) {
+//                                            mTransparentTitleView.setText("Piscou! ;)");
+//                                        }
+//                                    } else {
+//                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
+//                                        frameCount=0;
+//                                    }
+//                                }
+
+
+
+                                if (calibrationCount<500) {
+                                    mTransparentTitleView.setText("open mouth: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount>100) {
+                                        db.collection("open_mouth")
+                                                .add(landmark_hash)
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentReference documentReference) {
+                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Log.w(TAG, "Error adding document", e);
+                                                    }
+                                                });
+//                                        measurement.put("open_mouth",landmark_hash);
+                                    }
+                                } else if (calibrationCount<1000) {
+                                    mTransparentTitleView.setText("raise your eyebrows: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount>600) {
+                                        //measurement.put("eyebrows_raised",landmark_hash);
+                                        db.collection("eyebrows_raised")
+                                                .add(landmark_hash)
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentReference documentReference) {
+                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Log.w(TAG, "Error adding document", e);
+                                                    }
+                                                });
+                                    }
+                                } else if (calibrationCount<1500) {
+                                    mTransparentTitleView.setText("kiss: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount>1100){
+                                        //measurement.put("kiss",landmark_hash);
+                                        db.collection("kiss")
+                                                .add(landmark_hash)
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentReference documentReference) {
+                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Log.w(TAG, "Error adding document", e);
+                                                    }
+                                                });
+                                    }
+                                } else if (calibrationCount<2000) {
+                                    mTransparentTitleView.setText("close your eyes: " + String.valueOf(calibrationCount));
+                                    if (calibrationCount > 1600) {
+                                        //measurement.put("closed_eyes", landmark_hash);
+                                        db.collection("eyes_closed")
+                                                .add(landmark_hash)
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentReference documentReference) {
+                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Log.w(TAG, "Error adding document", e);
+                                                    }
+                                                });
+                                    }
+                                } else if (calibrationCount<3000) {
+                                    mTransparentTitleView.setText("neutral face: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount>2100){
+                                        //measurement.put("neutral_face",landmark_hash);
+                                        db.collection("neutral_face")
+                                                .add(landmark_hash)
+                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                    @Override
+                                                    public void onSuccess(DocumentReference documentReference) {
+                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                    }
+                                                })
+                                                .addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Log.w(TAG, "Error adding document", e);
+                                                    }
+                                                });
+                                    }
+                                } else {
+                                    mTransparentTitleView.setText("data sent");
+//                                    if (!send_flag) {
+//                                        mTransparentTitleView.setText("finished getting data");
+//                                        send_flag = true;
+//                                        db.collection("training_data")
+//                                                .add(measurement)
+//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+//                                                    @Override
+//                                                    public void onSuccess(DocumentReference documentReference) {
+//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+//                                                    }
+//                                                })
+//                                                .addOnFailureListener(new OnFailureListener() {
+//                                                    @Override
+//                                                    public void onFailure(@NonNull Exception e) {
+//                                                        Log.w(TAG, "Error adding document", e);
+//                                                    }
+//                                                });
+//                                    } else {
+//                                        mTransparentTitleView.setText("data sent");
+//                                    }
+                                }
+                                calibrationCount++;
 
                                 for (Point point : landmarks) {
                                     int pointX = (int) (point.x * resizeRatio);
