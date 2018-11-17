@@ -49,6 +49,10 @@ import com.tzutalin.dlib.Constants;
 import com.tzutalin.dlib.FaceDet;
 import com.tzutalin.dlib.VisionDetRet;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import junit.framework.Assert;
 
 import java.io.File;
@@ -172,12 +176,11 @@ public class OnGetImageListener implements OnImageAvailableListener {
 
     private int frameCount = 0;
     private int calibrationCount=0;
+    private int roundCount=0;
     private double calibrationEAR=100;
     Map<String, Object> measurement = new HashMap<>();
-    Map<String, Object> mixed = new HashMap<>();
     private boolean send_flag=false;
     FirebaseFirestore db = FirebaseFirestore.getInstance();
-    //FirebaseDatabase database = FirebaseDatabase.getInstance();
     @Override
     public void onImageAvailable(final ImageReader reader) {
         Image image = null;
@@ -286,143 +289,39 @@ public class OnGetImageListener implements OnImageAvailableListener {
                                 ArrayList<Point> landmarks = ret.getFaceLandmarks();
                                 Map<String, Object> landmark_hash = new HashMap<>();
 
+                                for (Point point : landmarks) {
+                                    int pointX = (int) (point.x * resizeRatio);
+                                    int pointY = (int) (point.y * resizeRatio);
+                                    canvas.drawCircle(pointX, pointY, 2, mFaceLandmardkPaint);
+                                }
+
+                                landmark_hash.put("left",bounds.left);
+                                landmark_hash.put("right",bounds.right);
+                                landmark_hash.put("top",bounds.top);
+                                landmark_hash.put("bottom",bounds.bottom);
 
                                 for (int i = 0; i < landmarks.size(); i++) {
 //                                    Map<String, Object> point_hash = new HashMap<>();
 //                                    point_hash.put("x",String.valueOf();
 //                                    point_hash.put("y",String.valueOf(landmarks.get(i).y));
-                                    landmark_hash.put(String.valueOf(i)+"_x",landmarks.get(i).x);
-                                    landmark_hash.put(String.valueOf(i)+"_y",landmarks.get(i).y);
+                                    landmark_hash.put("x_"+String.valueOf(i),landmarks.get(i).x);
+                                    landmark_hash.put("y_"+String.valueOf(i),landmarks.get(i).y);
                                 }
 
 
-//                                List<Point> leftEye = landmarks.subList(36,42);
-//                                //ArrayList<Point> rightEye = (ArrayList<Point>) ret.getFaceLandmarks().subList(42,47);
-//                                double EAR = calculateEAR(leftEye);
-//
-//                                if (calibrationCount<30) {
-//                                    mTransparentTitleView.setText("Calibrating... Keep blinking");
-//                                    if (calibrationEAR>EAR) {
-//                                        calibrationEAR=EAR;
-//                                    }
-//                                    calibrationCount++;
-//                                } else {
-//                                    if (EAR<calibrationEAR+0.2){
-//                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
-//                                        frameCount++;
-//                                        if (frameCount>2) {
-//                                            mTransparentTitleView.setText("Piscou! ;)");
-//                                        }
-//                                    } else {
-//                                        mTransparentTitleView.setText("EAR: " + String.valueOf((EAR)));
-//                                        frameCount=0;
-//                                    }
-//                                }
-
-
-
-                                if (calibrationCount<500) {
-                                    mTransparentTitleView.setText("open mouth: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount>100) {
-                                        db.collection("open_mouth")
-                                                .add(landmark_hash)
-                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                    @Override
-                                                    public void onSuccess(DocumentReference documentReference) {
-                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        Log.w(TAG, "Error adding document", e);
-                                                    }
-                                                });
-//                                        measurement.put("open_mouth",landmark_hash);
+                                if (calibrationCount<15) {
+                                    mTransparentTitleView.setText("open mouth in 14: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount==14) {
+                                        landmark_hash.put("target", "open_mouth");
+                                        measurement.put("open_mouth_"+String.valueOf(roundCount+2),landmark_hash);
                                     }
-                                } else if (calibrationCount<1000) {
-                                    mTransparentTitleView.setText("raise your eyebrows: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount>600) {
-                                        //measurement.put("eyebrows_raised",landmark_hash);
-                                        db.collection("eyebrows_raised")
-                                                .add(landmark_hash)
-                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                    @Override
-                                                    public void onSuccess(DocumentReference documentReference) {
-                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        Log.w(TAG, "Error adding document", e);
-                                                    }
-                                                });
-                                    }
-                                } else if (calibrationCount<1500) {
-                                    mTransparentTitleView.setText("kiss: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount>1100){
-                                        //measurement.put("kiss",landmark_hash);
-                                        db.collection("kiss")
-                                                .add(landmark_hash)
-                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                    @Override
-                                                    public void onSuccess(DocumentReference documentReference) {
-                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        Log.w(TAG, "Error adding document", e);
-                                                    }
-                                                });
-                                    }
-                                } else if (calibrationCount<2000) {
-                                    mTransparentTitleView.setText("close your eyes: " + String.valueOf(calibrationCount));
-                                    if (calibrationCount > 1600) {
-                                        //measurement.put("closed_eyes", landmark_hash);
-                                        db.collection("eyes_closed")
-                                                .add(landmark_hash)
-                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                    @Override
-                                                    public void onSuccess(DocumentReference documentReference) {
-                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        Log.w(TAG, "Error adding document", e);
-                                                    }
-                                                });
-                                    }
-                                } else if (calibrationCount<3000) {
-                                    mTransparentTitleView.setText("neutral face: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount>2100){
-                                        //measurement.put("neutral_face",landmark_hash);
-                                        db.collection("neutral_face")
-                                                .add(landmark_hash)
-                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                    @Override
-                                                    public void onSuccess(DocumentReference documentReference) {
-                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                    }
-                                                })
-                                                .addOnFailureListener(new OnFailureListener() {
-                                                    @Override
-                                                    public void onFailure(@NonNull Exception e) {
-                                                        Log.w(TAG, "Error adding document", e);
-                                                    }
-                                                });
-                                    }
-                                } else {
-                                    mTransparentTitleView.setText("data sent");
-//                                    if (!send_flag) {
-//                                        mTransparentTitleView.setText("finished getting data");
-//                                        send_flag = true;
-//                                        db.collection("training_data")
-//                                                .add(measurement)
+                                } else if (calibrationCount<30) {
+                                    mTransparentTitleView.setText("raise your eyebrows in 29: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount==29) {
+                                        landmark_hash.put("target", "eyebrows_raised");
+                                        measurement.put("eyebrows_raised_"+String.valueOf(roundCount+2),landmark_hash);
+//                                        db.collection("eyebrows_raised")
+//                                                .add(landmark_hash)
 //                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
 //                                                    @Override
 //                                                    public void onSuccess(DocumentReference documentReference) {
@@ -435,20 +334,84 @@ public class OnGetImageListener implements OnImageAvailableListener {
 //                                                        Log.w(TAG, "Error adding document", e);
 //                                                    }
 //                                                });
-//                                    } else {
-//                                        mTransparentTitleView.setText("data sent");
-//                                    }
-                                }
-                                calibrationCount++;
+                                    }
+                                } else if (calibrationCount<45) {
+                                    mTransparentTitleView.setText("kiss in 44: "+String.valueOf(calibrationCount));
+                                    if (calibrationCount==44){
+                                        landmark_hash.put("target", "kiss");
+                                        measurement.put("kiss_"+String.valueOf(roundCount+2),landmark_hash);
+//                                        db.collection("kiss")
+//                                                .add(landmark_hash)
+//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+//                                                    @Override
+//                                                    public void onSuccess(DocumentReference documentReference) {
+//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+//                                                    }
+//                                                })
+//                                                .addOnFailureListener(new OnFailureListener() {
+//                                                    @Override
+//                                                    public void onFailure(@NonNull Exception e) {
+//                                                        Log.w(TAG, "Error adding document", e);
+//                                                    }
+//                                                });
+                                    }
+                                } else if (calibrationCount<60) {
+                                    mTransparentTitleView.setText("close your eyes in 59: " + String.valueOf(calibrationCount));
+                                    if (calibrationCount == 59) {
+                                        landmark_hash.put("target", "closed_eyes");
+                                        measurement.put("closed_eyes_"+String.valueOf(roundCount+2),landmark_hash);
+                                        roundCount++;
+//                                        db.collection("eyes_closed")
+//                                                .add(landmark_hash)
+//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+//                                                    @Override
+//                                                    public void onSuccess(DocumentReference documentReference) {
+//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+//                                                    }
+//                                                })
+//                                                .addOnFailureListener(new OnFailureListener() {
+//                                                    @Override
+//                                                    public void onFailure(@NonNull Exception e) {
+//                                                        Log.w(TAG, "Error adding document", e);
+//                                                    }
+//                                                });
+                                    }
+                                } else {
+                                    if (roundCount>=10) {
+                                        calibrationCount=60;
+                                    } else {
+                                        calibrationCount=0;
+                                    }
 
-                                for (Point point : landmarks) {
-                                    int pointX = (int) (point.x * resizeRatio);
-                                    int pointY = (int) (point.y * resizeRatio);
-                                    canvas.drawCircle(pointX, pointY, 2, mFaceLandmardkPaint);
                                 }
+
+                                if (roundCount>=10){
+                                        roundCount++;
+                                        if (!send_flag) {
+                                            mTransparentTitleView.setText("finished getting data");
+                                            send_flag = true;
+                                            db.collection("training_data")
+                                                    .add(measurement)
+                                                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                                        @Override
+                                                        public void onSuccess(DocumentReference documentReference) {
+                                                            Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+                                                        }
+                                                    })
+                                                    .addOnFailureListener(new OnFailureListener() {
+                                                        @Override
+                                                        public void onFailure(@NonNull Exception e) {
+                                                            Log.w(TAG, "Error adding document", e);
+                                                        }
+                                                    });
+                                        } else {
+                                            mTransparentTitleView.setText("data sent");
+                                        }
+                                }
+
+                                calibrationCount++;
                             }
                         }
-
                         mWindow.setRGBBitmap(mCroppedBitmap);
                         mIsComputing = false;
                     }

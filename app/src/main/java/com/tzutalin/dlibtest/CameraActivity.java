@@ -25,6 +25,8 @@ import android.provider.Settings;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+
+
 /**
  * Created by darrenl on 2016/5/20.
  */
