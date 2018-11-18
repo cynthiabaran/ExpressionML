@@ -18,6 +18,7 @@ package com.tzutalin.dlibtest;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -39,7 +40,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.widget.Toast;
-
+import org.tensorflow.lite.Interpreter;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.FirebaseDatabase;
@@ -56,6 +57,10 @@ import org.json.JSONObject;
 import junit.framework.Assert;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -93,9 +98,9 @@ public class OnGetImageListener implements OnImageAvailableListener {
     private TrasparentTitleView mTransparentTitleView;
     private FloatingCameraWindow mWindow;
     private Paint mFaceLandmardkPaint;
+    private Classifier mClassifier;
 
-    public void initialize(
-            final Context context,
+    public void initialize(final Context context,
             final AssetManager assetManager,
             final TrasparentTitleView scoreView,
             final Handler handler) {
@@ -104,11 +109,15 @@ public class OnGetImageListener implements OnImageAvailableListener {
         this.mInferenceHandler = handler;
         mFaceDet = new FaceDet(Constants.getFaceShapeModelPath());
         mWindow = new FloatingCameraWindow(mContext);
-
         mFaceLandmardkPaint = new Paint();
         mFaceLandmardkPaint.setColor(Color.GREEN);
         mFaceLandmardkPaint.setStrokeWidth(2);
         mFaceLandmardkPaint.setStyle(Paint.Style.STROKE);
+        try {
+            mClassifier = new Classifier(context);
+        } catch (IOException e) {
+
+        }
     }
 
     public void deInitialize() {
@@ -173,14 +182,19 @@ public class OnGetImageListener implements OnImageAvailableListener {
         return Math.hypot(p1.x-p2.x, p1.y-p2.y);
     }
 
+//
+//    private int frameCount = 0;
+//    private int calibrationCount=0;
+//    private int roundCount=0;
+//    private double calibrationEAR=100;
+//    Map<String, Object> measurement = new HashMap<>();
+//    private boolean send_flag=false;
+//    FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-    private int frameCount = 0;
-    private int calibrationCount=0;
-    private int roundCount=0;
-    private double calibrationEAR=100;
-    Map<String, Object> measurement = new HashMap<>();
-    private boolean send_flag=false;
-    FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+    private static final String MODEL_PATH = "converted_model.tflite";
+
+
     @Override
     public void onImageAvailable(final ImageReader reader) {
         Image image = null;
@@ -295,121 +309,90 @@ public class OnGetImageListener implements OnImageAvailableListener {
                                     canvas.drawCircle(pointX, pointY, 2, mFaceLandmardkPaint);
                                 }
 
-                                landmark_hash.put("left",bounds.left);
-                                landmark_hash.put("right",bounds.right);
-                                landmark_hash.put("top",bounds.top);
-                                landmark_hash.put("bottom",bounds.bottom);
+                                float minX, minY;
+                                float points[] = new float[22];
 
-                                for (int i = 0; i < landmarks.size(); i++) {
-//                                    Map<String, Object> point_hash = new HashMap<>();
-//                                    point_hash.put("x",String.valueOf();
-//                                    point_hash.put("y",String.valueOf(landmarks.get(i).y));
-                                    landmark_hash.put("x_"+String.valueOf(i),landmarks.get(i).x);
-                                    landmark_hash.put("y_"+String.valueOf(i),landmarks.get(i).y);
+//                                for(int i = 0; i < 22; i++) {
+//                                    points[i]=0;
+//                                }
+
+                                if(landmarks.size() >= 68) {
+                                    float scaleX =  (float)(landmarks.get(45).x - landmarks.get(36).x);
+                                    float scaleY =  (float)(landmarks.get(33).y - landmarks.get(27).y);
+                                    minX = 9999999;
+                                    minY = 9999999;
+                                    for(int i = 48; i < 59; i++) {
+                                        points[i-48] = landmarks.get(i).x / scaleX;
+                                        if(points[i-48] < minX) minX = points[i-48];
+                                    }
+
+                                    for(int i=0; i<11; i++) {
+                                        points[i]=points[i]-minX;
+                                    }
+
+                                    for(int i = 48; i < 59; i++) {
+                                        points[i-48+11] = landmarks.get(i).y / scaleY;
+                                        if(points[i-48+11] < minY) minY = points[i-48+11];
+                                    }
+
+                                    for(int i=11; i<22; i++) {
+                                        points[i]=points[i]-minY;
+                                    }
+
+                                    Result result = mClassifier.classify(points);
+
+                                    String expression="";
+
+                                    switch (result.getNumber()) {
+                                        case 0:  expression = "neutra";
+                                            break;
+                                        case 1:  expression = "beijo";
+                                            break;
+                                        case 2:  expression = "boca reta";
+                                            break;
+                                        case 3:  expression = "boca aberta";
+                                            break;
+                                    }
+                                    mTransparentTitleView.setText("Expressão: " + expression);
+
+
+//                                for (int i = 0; i < landmarks.size(); i++) {
+////                                    Map<String, Object> point_hash = new HashMap<>();
+////                                    point_hash.put("x",String.valueOf();
+////                                    point_hash.put("y",String.valueOf(landmarks.get(i).y));
+//                                    landmark_hash.put("x_"+String.valueOf(i),landmarks.get(i).x);
+//                                    landmark_hash.put("y_"+String.valueOf(i),landmarks.get(i).y);
+//                                }
+
+
+
+
+//                                if (roundCount>=10){
+//                                        roundCount++;
+//                                        if (!send_flag) {
+//                                            mTransparentTitleView.setText("finished getting data");
+//                                            send_flag = true;
+//                                            db.collection("training_data")
+//                                                    .add(measurement)
+//                                                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+//                                                        @Override
+//                                                        public void onSuccess(DocumentReference documentReference) {
+//                                                            Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
+//                                                        }
+//                                                    })
+//                                                    .addOnFailureListener(new OnFailureListener() {
+//                                                        @Override
+//                                                        public void onFailure(@NonNull Exception e) {
+//                                                            Log.w(TAG, "Error adding document", e);
+//                                                        }
+//                                                    });
+//                                        } else {
+//                                            mTransparentTitleView.setText("data sent");
+//                                        }
+//                                }
+//
+//                                calibrationCount++;
                                 }
-
-
-                                if (calibrationCount<15) {
-                                    mTransparentTitleView.setText("open mouth in 14: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount==14) {
-                                        landmark_hash.put("target", "open_mouth");
-                                        measurement.put("open_mouth_"+String.valueOf(roundCount+2),landmark_hash);
-                                    }
-                                } else if (calibrationCount<30) {
-                                    mTransparentTitleView.setText("raise your eyebrows in 29: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount==29) {
-                                        landmark_hash.put("target", "eyebrows_raised");
-                                        measurement.put("eyebrows_raised_"+String.valueOf(roundCount+2),landmark_hash);
-//                                        db.collection("eyebrows_raised")
-//                                                .add(landmark_hash)
-//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-//                                                    @Override
-//                                                    public void onSuccess(DocumentReference documentReference) {
-//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-//                                                    }
-//                                                })
-//                                                .addOnFailureListener(new OnFailureListener() {
-//                                                    @Override
-//                                                    public void onFailure(@NonNull Exception e) {
-//                                                        Log.w(TAG, "Error adding document", e);
-//                                                    }
-//                                                });
-                                    }
-                                } else if (calibrationCount<45) {
-                                    mTransparentTitleView.setText("kiss in 44: "+String.valueOf(calibrationCount));
-                                    if (calibrationCount==44){
-                                        landmark_hash.put("target", "kiss");
-                                        measurement.put("kiss_"+String.valueOf(roundCount+2),landmark_hash);
-//                                        db.collection("kiss")
-//                                                .add(landmark_hash)
-//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-//                                                    @Override
-//                                                    public void onSuccess(DocumentReference documentReference) {
-//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-//                                                    }
-//                                                })
-//                                                .addOnFailureListener(new OnFailureListener() {
-//                                                    @Override
-//                                                    public void onFailure(@NonNull Exception e) {
-//                                                        Log.w(TAG, "Error adding document", e);
-//                                                    }
-//                                                });
-                                    }
-                                } else if (calibrationCount<60) {
-                                    mTransparentTitleView.setText("close your eyes in 59: " + String.valueOf(calibrationCount));
-                                    if (calibrationCount == 59) {
-                                        landmark_hash.put("target", "closed_eyes");
-                                        measurement.put("closed_eyes_"+String.valueOf(roundCount+2),landmark_hash);
-                                        roundCount++;
-//                                        db.collection("eyes_closed")
-//                                                .add(landmark_hash)
-//                                                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-//                                                    @Override
-//                                                    public void onSuccess(DocumentReference documentReference) {
-//                                                        Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-//                                                    }
-//                                                })
-//                                                .addOnFailureListener(new OnFailureListener() {
-//                                                    @Override
-//                                                    public void onFailure(@NonNull Exception e) {
-//                                                        Log.w(TAG, "Error adding document", e);
-//                                                    }
-//                                                });
-                                    }
-                                } else {
-                                    if (roundCount>=10) {
-                                        calibrationCount=60;
-                                    } else {
-                                        calibrationCount=0;
-                                    }
-
-                                }
-
-                                if (roundCount>=10){
-                                        roundCount++;
-                                        if (!send_flag) {
-                                            mTransparentTitleView.setText("finished getting data");
-                                            send_flag = true;
-                                            db.collection("training_data")
-                                                    .add(measurement)
-                                                    .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                                        @Override
-                                                        public void onSuccess(DocumentReference documentReference) {
-                                                            Log.d(TAG, "DocumentSnapshot added with ID: " + documentReference.getId());
-                                                        }
-                                                    })
-                                                    .addOnFailureListener(new OnFailureListener() {
-                                                        @Override
-                                                        public void onFailure(@NonNull Exception e) {
-                                                            Log.w(TAG, "Error adding document", e);
-                                                        }
-                                                    });
-                                        } else {
-                                            mTransparentTitleView.setText("data sent");
-                                        }
-                                }
-
-                                calibrationCount++;
                             }
                         }
                         mWindow.setRGBBitmap(mCroppedBitmap);
